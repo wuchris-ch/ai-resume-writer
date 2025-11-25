@@ -29,7 +29,7 @@ export default function Footer() {
 
           {/* Social Links */}
           <div className="flex items-center gap-4">
-            <a href="#" className="text-white/40 hover:text-accent transition-colors">
+            <a href="https://github.com/wuchris-ch/ai-resume-writer" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-accent transition-colors">
               <Github className="w-5 h-5" />
             </a>
             <a href="#" className="text-white/40 hover:text-accent transition-colors">
