@@ -1,5 +1,5 @@
 @import url('https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&f[]=satoshi@400,500,700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -206,34 +206,146 @@ body {
 .stagger-5 { animation-delay: 0.5s; }
 .stagger-6 { animation-delay: 0.6s; }
 
-/* Resume Preview Styles */
-.resume-preview {
-  font-family: 'Georgia', serif;
-  font-size: 11px;
+/* Resume Preview Wrapper */
+.resume-preview-wrapper {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  max-height: 32rem;
+  overflow: auto;
+}
+
+/* Resume Document - The actual resume */
+.resume-document {
+  font-family: 'Crimson Pro', 'Georgia', 'Times New Roman', serif;
+  background: #ffffff;
+  color: #1f2937;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 48px;
   line-height: 1.5;
-  color: #1a1a1a;
+  font-size: 13px;
 }
 
-.resume-preview h1 {
-  font-size: 18px;
+/* Resume Header */
+.resume-header {
+  text-align: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #1f2937;
+}
+
+.resume-name {
+  font-family: 'Crimson Pro', 'Georgia', serif;
+  font-size: 28px;
   font-weight: 700;
-  margin-bottom: 4px;
-}
-
-.resume-preview h2 {
-  font-size: 12px;
-  font-weight: 600;
+  letter-spacing: 3px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid #333;
-  padding-bottom: 2px;
-  margin-top: 12px;
-  margin-bottom: 6px;
+  color: #111827;
+  margin: 0 0 10px 0;
 }
 
-.resume-preview h3 {
-  font-size: 11px;
+.resume-contact {
+  font-size: 12px;
+  color: #4b5563;
+  line-height: 1.6;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Resume Content */
+.resume-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Resume Section */
+.resume-section {
+  margin: 0;
+}
+
+.resume-section-title {
+  font-family: 'Crimson Pro', 'Georgia', serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #111827;
+  margin: 0 0 10px 0;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #9ca3af;
+}
+
+.resume-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Resume Entry */
+.resume-entry {
+  margin: 0;
+}
+
+.resume-entry-title {
+  font-family: 'Crimson Pro', 'Georgia', serif;
+  font-size: 14px;
   font-weight: 600;
+  color: #111827;
+  margin: 0 0 2px 0;
+}
+
+.resume-entry-text {
+  margin: 0;
+}
+
+.resume-entry-text p {
+  margin: 2px 0;
+  color: #374151;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* Resume Bullets */
+.resume-bullets {
+  list-style: disc;
+  padding-left: 18px;
+  margin: 6px 0 0 0;
+}
+
+.resume-bullets li {
+  color: #374151;
+  line-height: 1.55;
+  font-size: 13px;
+  margin-bottom: 3px;
+  padding-left: 2px;
+}
+
+.resume-bullets li:last-child {
+  margin-bottom: 0;
+}
+
+.resume-bullets li::marker {
+  color: #6b7280;
+}
+
+/* PDF Export Wrapper - Hidden offscreen for rendering */
+.resume-pdf-wrapper {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  padding: 0;
+  width: 816px; /* 8.5 inches at 96 DPI */
+  background: #ffffff;
+}
+
+.resume-pdf-wrapper .resume-document {
+  padding: 40px 48px;
+  box-shadow: none;
+  border-radius: 0;
+  max-width: none;
 }
 
 /* Highlight Animation */
@@ -252,4 +364,3 @@ body {
   border-radius: 2px;
   animation: highlight-pulse 2s ease-in-out infinite;
 }
-

@@ -58,6 +58,271 @@ interface HistoryEntry {
   content: string
 }
 
+interface ResumeEntry {
+  title?: string
+  bullets: string[]
+  paragraphs: string[]
+}
+
+interface ResumeSection {
+  title: string
+  entries: ResumeEntry[]
+}
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+
+// Common section headers to detect in plain text resumes
+const SECTION_KEYWORDS = [
+  'SUMMARY', 'OBJECTIVE', 'PROFILE', 'ABOUT',
+  'EXPERIENCE', 'WORK EXPERIENCE', 'EMPLOYMENT', 'WORK HISTORY', 'PROFESSIONAL EXPERIENCE',
+  'EDUCATION', 'ACADEMIC', 'ACADEMICS',
+  'SKILLS', 'TECHNICAL SKILLS', 'CORE COMPETENCIES', 'COMPETENCIES',
+  'PROJECTS', 'PROJECT',
+  'CERTIFICATIONS', 'CERTIFICATES', 'CREDENTIALS',
+  'AWARDS', 'HONORS', 'ACHIEVEMENTS',
+  'PUBLICATIONS', 'RESEARCH',
+  'VOLUNTEER', 'VOLUNTEERING', 'COMMUNITY',
+  'LEADERSHIP', 'LEADERSHIP & CAMPUS INVOLVEMENT', 'ACTIVITIES', 'EXTRACURRICULAR',
+  'INTERESTS', 'HOBBIES',
+  'REFERENCES', 'LANGUAGES',
+]
+
+const isSectionHeader = (line: string): boolean => {
+  const upper = line.toUpperCase().replace(/[:\-–—]/g, '').trim()
+  return SECTION_KEYWORDS.some(kw => upper === kw || upper.startsWith(kw + ' '))
+}
+
+const looksLikeContactInfo = (line: string): boolean => {
+  // Check if line contains typical contact patterns
+  const patterns = [
+    /@.*\.(com|edu|org|net)/i,  // email
+    /\(\d{3}\)\s*\d{3}[\s-]*\d{4}/,  // phone (xxx) xxx-xxxx
+    /\d{3}[\s.-]\d{3}[\s.-]\d{4}/,  // phone xxx-xxx-xxxx
+    /linkedin\.com/i,
+    /github\.com/i,
+    /portfolio/i,
+    /^[A-Za-z\s]+,\s*[A-Z]{2}$/,  // City, ST format
+  ]
+  return patterns.some(p => p.test(line))
+}
+
+const looksLikeBulletPoint = (line: string): boolean => {
+  return /^[\u2022•\-\*\>]\s+/.test(line) || /^\d+[\.\)]\s+/.test(line)
+}
+
+const cleanBulletPrefix = (line: string): string => {
+  return line.replace(/^[\u2022•\-\*\>]\s+/, '').replace(/^\d+[\.\)]\s+/, '').trim()
+}
+
+const parseResumeContent = (content: string) => {
+  const lines = content.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+  
+  let name = 'Your Name'
+  let contactLines: string[] = []
+  const sections: ResumeSection[] = []
+  let currentSection: ResumeSection | null = null
+  let currentEntry: ResumeEntry | null = null
+  let lineIndex = 0
+
+  const pushEntry = () => {
+    if (currentEntry && currentSection) {
+      // Only add entry if it has content
+      if (currentEntry.title || currentEntry.bullets.length > 0 || currentEntry.paragraphs.length > 0) {
+        currentSection.entries.push(currentEntry)
+      }
+    }
+    currentEntry = null
+  }
+
+  const startSection = (title: string) => {
+    pushEntry()
+    const section: ResumeSection = { title, entries: [] }
+    sections.push(section)
+    currentSection = section
+  }
+
+  // Skip title lines like "Sample Resume" or similar
+  while (lineIndex < lines.length) {
+    const line = lines[lineIndex]
+    if (line.toLowerCase().includes('sample resume') || 
+        line.toLowerCase().includes('resume template') ||
+        line.toLowerCase().includes('curriculum vitae')) {
+      lineIndex++
+    } else {
+      break
+    }
+  }
+
+  // First non-title line is likely the name
+  if (lineIndex < lines.length) {
+    const firstLine = lines[lineIndex]
+    // Check if it's a markdown header
+    if (firstLine.startsWith('# ')) {
+      name = escapeHtml(firstLine.slice(2).trim())
+    } else if (!isSectionHeader(firstLine) && !looksLikeContactInfo(firstLine)) {
+      // Assume it's the name if it's not a section header or contact
+      name = escapeHtml(firstLine)
+    }
+    lineIndex++
+  }
+
+  // Collect contact info (lines before first section that look like contact)
+  while (lineIndex < lines.length) {
+    const line = lines[lineIndex]
+    
+    // Check for markdown section header
+    if (line.startsWith('## ')) {
+      break
+    }
+    
+    // Check for plain text section header
+    if (isSectionHeader(line)) {
+      break
+    }
+    
+    // This is likely contact/header info
+    contactLines.push(line)
+    lineIndex++
+  }
+
+  // Parse the rest of the content
+  for (; lineIndex < lines.length; lineIndex++) {
+    const line = lines[lineIndex]
+    
+    // Check for markdown section headers (## Section)
+    if (line.startsWith('## ')) {
+      startSection(escapeHtml(line.slice(3).trim()))
+      continue
+    }
+    
+    // Check for plain text section headers (all caps or known keywords)
+    if (isSectionHeader(line)) {
+      startSection(escapeHtml(line.replace(/[:\-–—]+$/, '').trim()))
+      continue
+    }
+    
+    // Check for markdown entry headers (### Entry)
+    if (line.startsWith('### ')) {
+      pushEntry()
+      if (!currentSection) startSection('Experience')
+      currentEntry = {
+        title: escapeHtml(line.slice(4).trim()),
+        bullets: [],
+        paragraphs: [],
+      }
+      continue
+    }
+    
+    // Check for bullet points
+    if (looksLikeBulletPoint(line)) {
+      if (!currentSection) startSection('Details')
+      if (!currentEntry) currentEntry = { bullets: [], paragraphs: [] }
+      currentEntry.bullets.push(escapeHtml(cleanBulletPrefix(line)))
+      continue
+    }
+    
+    // Regular line - could be an entry title or paragraph
+    if (!currentSection) {
+      // Still in header area, add to contact
+      contactLines.push(line)
+      continue
+    }
+    
+    // If line looks like a job title (contains dates, company indicators)
+    const looksLikeJobTitle = /\d{4}|present|current|–|-|—|\|/i.test(line) && line.length < 150
+    
+    if (looksLikeJobTitle && (!currentEntry || currentEntry.bullets.length > 0 || currentEntry.paragraphs.length > 0)) {
+      pushEntry()
+      currentEntry = {
+        title: escapeHtml(line),
+        bullets: [],
+        paragraphs: [],
+      }
+    } else {
+      if (!currentEntry) currentEntry = { bullets: [], paragraphs: [] }
+      currentEntry.paragraphs.push(escapeHtml(line))
+    }
+  }
+
+  pushEntry()
+
+  // If no sections were created, create a simple profile section
+  if (sections.length === 0) {
+    const allContent = lines.slice(1).join('\n')  // Skip name
+    sections.push({
+      title: 'Profile',
+      entries: [{ bullets: [], paragraphs: [escapeHtml(allContent)] }],
+    })
+  }
+
+  // Process contact info - combine into single clean string
+  const contactStr = contactLines
+    .join(' ')
+    .split(/[\u2022•|·]+/)
+    .map(s => s.trim())
+    .filter(Boolean)
+    .join(' • ')
+
+  return { name, contact: contactStr, sections }
+}
+
+const buildResumeHtml = (content: string) => {
+  const { name, contact, sections } = parseResumeContent(content)
+
+  const sectionsHtml = sections
+    .map(
+      (section) => `
+        <section class="resume-section">
+          <h2 class="resume-section-title">${section.title}</h2>
+          <div class="resume-section-body">
+            ${section.entries
+              .map(
+                (entry) => `
+                  <div class="resume-entry">
+                    ${entry.title ? `<h3 class="resume-entry-title">${entry.title}</h3>` : ''}
+                    ${
+                      entry.paragraphs.length
+                        ? `<div class="resume-entry-text">${entry.paragraphs
+                            .map((p) => `<p>${p}</p>`)
+                            .join('')}</div>`
+                        : ''
+                    }
+                    ${
+                      entry.bullets.length
+                        ? `<ul class="resume-bullets">${entry.bullets
+                            .map((b) => `<li>${b}</li>`)
+                            .join('')}</ul>`
+                        : ''
+                    }
+                  </div>
+                `,
+              )
+              .join('')}
+          </div>
+        </section>
+      `,
+    )
+    .join('')
+
+  return `
+    <div class="resume-document">
+      <header class="resume-header">
+        <h1 class="resume-name">${name}</h1>
+        ${contact ? `<div class="resume-contact">${contact}</div>` : ''}
+      </header>
+      <main class="resume-content">
+        ${sectionsHtml}
+      </main>
+    </div>
+  `
+}
+
 const STORAGE_KEYS = {
   resume: 'resumeTailor_resume',
   job: 'resumeTailor_job',
@@ -89,6 +354,7 @@ export default function ResumeTailor({ apiKey, onBack, onApiKeyChange }: ResumeT
   const [coverLetterStatus, setCoverLetterStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const [previewEditing, setPreviewEditing] = useState(false)
   const [previewDraft, setPreviewDraft] = useState('')
+  const [showInputPreview, setShowInputPreview] = useState(false)
 
   const createId = () =>
     typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -535,33 +801,36 @@ Guidelines:
     try {
       const html2canvas = (await import('html2canvas')).default
       const jsPDF = (await import('jspdf')).default
-      
-      // Create a temporary element with the tailored resume
+
       const element = document.createElement('div')
-      element.innerHTML = `
-        <div style="font-family: Georgia, serif; padding: 40px; max-width: 800px; font-size: 11pt; line-height: 1.6; color: #1a1a1a;">
-          ${generateTailoredResume().split('\n').map(line => {
-            if (line.startsWith('# ')) return `<h1 style="font-size: 18pt; margin-bottom: 4px;">${line.slice(2)}</h1>`
-            if (line.startsWith('## ')) return `<h2 style="font-size: 12pt; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 2px; margin-top: 16px;">${line.slice(3)}</h2>`
-            if (line.startsWith('### ')) return `<h3 style="font-size: 11pt; font-weight: 600;">${line.slice(4)}</h3>`
-            if (line.startsWith('- ')) return `<p style="margin-left: 20px;">• ${line.slice(2)}</p>`
-            return `<p>${line}</p>`
-          }).join('')}
-        </div>
-      `
-      element.style.position = 'absolute'
-      element.style.left = '-9999px'
-      element.style.background = 'white'
+      element.className = 'resume-pdf-wrapper'
+      element.innerHTML = buildResumeHtml(generateTailoredResume())
+
       document.body.appendChild(element)
 
-      const canvas = await html2canvas(element, { scale: 2 })
+      if ((document as any).fonts?.ready) {
+        await (document as any).fonts.ready.catch(() => {})
+      }
+
+      const canvas = await html2canvas(element, { scale: 3, backgroundColor: '#f8fafc' })
       const pdf = new jsPDF('p', 'mm', 'a4')
       const imgWidth = 210
       const imgHeight = (canvas.height * imgWidth) / canvas.width
-      
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, imgWidth, imgHeight)
+      let heightLeft = imgHeight
+      let position = 0
+      const pageHeight = 297
+
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST')
+      heightLeft -= pageHeight
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight
+        pdf.addPage()
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST')
+        heightLeft -= pageHeight
+      }
+
       pdf.save('tailored-resume.pdf')
-      
       document.body.removeChild(element)
       toast.success('Resume exported as PDF!')
     } catch (error) {
@@ -943,7 +1212,15 @@ List your skills"
               </div>
 
               {/* Tailor Button */}
-              <div className="flex justify-center">
+              <div className="flex justify-center gap-4">
+                <button
+                  onClick={() => setShowInputPreview(!showInputPreview)}
+                  disabled={!resume.trim()}
+                  className="btn-secondary text-lg px-6 py-4 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Eye className="w-5 h-5" />
+                  {showInputPreview ? 'Hide Preview' : 'Preview Resume'}
+                </button>
                 <button
                   onClick={handleTailor}
                   disabled={!jobDescription.trim() || !resume.trim()}
@@ -954,6 +1231,31 @@ List your skills"
                   <Sparkles className="w-5 h-5" />
                 </button>
               </div>
+
+              {/* Resume Preview */}
+              <AnimatePresence>
+                {showInputPreview && resume.trim() && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="card">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <Eye className="w-5 h-5 text-lavender" />
+                          <h3 className="font-semibold text-white">Resume Preview</h3>
+                        </div>
+                        <p className="text-sm text-white/50">This is how your resume will be formatted</p>
+                      </div>
+                      <div className="resume-preview-wrapper">
+                        <div dangerouslySetInnerHTML={{ __html: buildResumeHtml(resume) }} />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
 
@@ -1385,26 +1687,11 @@ List your skills"
                 ) : (
                   <div 
                     ref={resumeRef}
-                    className="p-6 rounded-xl bg-white text-slate max-h-96 overflow-y-auto resume-preview"
+                    className="resume-preview-wrapper"
                   >
-                    {generateTailoredResume().split('\n').map((line, i) => {
-                      if (line.startsWith('# ')) {
-                        return <h1 key={i} className="text-lg font-bold text-slate mb-1">{line.slice(2)}</h1>
-                      }
-                      if (line.startsWith('## ')) {
-                        return <h2 key={i} className="text-sm font-semibold uppercase tracking-wide border-b border-slate/30 pb-1 mt-4 mb-2">{line.slice(3)}</h2>
-                      }
-                      if (line.startsWith('### ')) {
-                        return <h3 key={i} className="font-semibold mt-2">{line.slice(4)}</h3>
-                      }
-                      if (line.startsWith('- ')) {
-                        return <p key={i} className="ml-4">• {line.slice(2)}</p>
-                      }
-                      if (line.trim()) {
-                        return <p key={i}>{line}</p>
-                      }
-                      return <br key={i} />
-                    })}
+                    <div
+                      dangerouslySetInnerHTML={{ __html: buildResumeHtml(generateTailoredResume()) }}
+                    />
                   </div>
                 )}
               </div>
