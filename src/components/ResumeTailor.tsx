@@ -522,12 +522,14 @@ Guidelines:
     }
     setResult(updated)
     if (updatedCustom !== null) {
+      let customText = updatedCustom
       updated.suggestions.forEach((s) => {
-        if (s.original && updatedCustom.includes(s.original)) {
-          updatedCustom = updatedCustom.replace(s.original, s.suggested)
+        if (s.original && customText.includes(s.original)) {
+          customText = customText.replace(s.original, s.suggested)
         }
       })
-      setCustomTailored(updatedCustom)
+      updatedCustom = customText
+      setCustomTailored(customText)
     }
     const tailored = updatedCustom ?? generateTailoredResume(updated)
     captureHistory('Accepted all suggestions', tailored)
@@ -1397,7 +1399,7 @@ List your skills"
                       DOCX
                     </button>
                     <button
-                      onClick={downloadPlainText}
+                      onClick={() => downloadPlainText()}
                       className="btn-secondary text-sm flex items-center gap-2"
                     >
                       <FileText className="w-4 h-4" />
