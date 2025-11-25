@@ -153,7 +153,7 @@ export default function ApiKeyModal({ isOpen, onClose, onSave, currentKey }: Api
 
               {/* Get API Key Link */}
               <a
-                href="https://aistudio.google.com/app/apikey"
+                href="https://aistudio.google.com/app/api-keys"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-accent hover:text-accent-hover transition-colors"
@@ -161,6 +161,19 @@ export default function ApiKeyModal({ isOpen, onClose, onSave, currentKey }: Api
                 <ExternalLink className="w-4 h-4" />
                 Get your free Gemini API key from Google AI Studio
               </a>
+
+              {/* How to Get API Key Instructions */}
+              <div className="p-4 rounded-xl bg-slate/50 border border-white/5">
+                <p className="text-sm text-white font-medium mb-3">How to get your API key:</p>
+                <ol className="text-sm text-white/60 space-y-2 list-decimal list-inside">
+                  <li>Go to <a href="https://aistudio.google.com/app/api-keys" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">aistudio.google.com/app/api-keys</a> <span className="text-white/40">(or search "google ai studio api key")</span></li>
+                  <li>Click <span className="text-white/80">"Create API Key"</span> in the top right</li>
+                  <li>Click the dropdown and select <span className="text-white/80">"Create project"</span></li>
+                  <li>Name your project anything you want</li>
+                  <li>Name your key anything you want</li>
+                  <li>Click <span className="text-white/80">"Create API Key"</span> and copy it here!</li>
+                </ol>
+              </div>
 
               {/* Pricing Info */}
               <div className="p-4 rounded-xl bg-slate/50 border border-white/5">
