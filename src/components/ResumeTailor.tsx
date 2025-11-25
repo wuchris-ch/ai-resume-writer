@@ -57,7 +57,7 @@ export default function ResumeTailor({ apiKey, onBack, onApiKeyChange }: ResumeT
     try {
       const { GoogleGenerativeAI } = await import('@google/generative-ai')
       const genAI = new GoogleGenerativeAI(apiKey)
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-05-20' })
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
       const prompt = `You are an expert resume tailor and career coach. Analyze the following job description and resume, then provide detailed suggestions to tailor the resume for this specific role.
 

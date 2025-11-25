@@ -26,7 +26,7 @@ export default function ApiKeyModal({ isOpen, onClose, onSave, currentKey }: Api
     try {
       const { GoogleGenerativeAI } = await import('@google/generative-ai')
       const genAI = new GoogleGenerativeAI(key)
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-05-20' })
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
       await model.generateContent('Say "API key valid" in 3 words or less.')
       setTestResult('success')
     } catch (error) {
