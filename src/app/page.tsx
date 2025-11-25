@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Sparkles, FileText, Target, Zap, Shield, CheckCircle, 
@@ -23,6 +23,13 @@ export default function Home() {
   const [showApiModal, setShowApiModal] = useState(false)
   const [apiKey, setApiKey] = useState('')
 
+  useEffect(() => {
+    const storedKey = typeof window !== 'undefined' ? localStorage.getItem('resumeTailor_apiKey') : null
+    if (storedKey) {
+      setApiKey(storedKey)
+    }
+  }, [])
+
   const handleStartTailoring = () => {
     if (!apiKey) {
       setShowApiModal(true)
@@ -33,6 +40,7 @@ export default function Home() {
 
   const handleApiKeySave = (key: string) => {
     setApiKey(key)
+    localStorage.setItem('resumeTailor_apiKey', key)
     setShowApiModal(false)
     setShowApp(true)
   }
@@ -87,4 +95,3 @@ export default function Home() {
     </main>
   )
 }
-
