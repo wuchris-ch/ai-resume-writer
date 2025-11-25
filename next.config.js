@@ -5,9 +5,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // For GitHub Pages - set this to your repo name if not using custom domain
-  // basePath: '/your-repo-name',
-  // assetPrefix: '/your-repo-name/',
+  // For GitHub Pages subdirectory deployment
+  basePath: '/ai-resume-writer',
+  assetPrefix: '/ai-resume-writer/',
 }
 
 module.exports = nextConfig
