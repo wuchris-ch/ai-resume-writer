@@ -6,7 +6,7 @@ import {
   ArrowLeft, Sparkles, FileText, Target, Wand2, Download, 
   Copy, Check, RefreshCw, Key, ChevronRight, ChevronDown,
   Lightbulb, CheckCircle, XCircle, BarChart3, Eye, Edit3,
-  AlertCircle, Loader2, Link2, Save, History as HistoryIcon,
+  AlertCircle, Loader2, Save, History as HistoryIcon,
   RotateCcw, FileType, Mail, ClipboardCheck
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -41,7 +41,6 @@ interface JobHistoryEntry {
   id: string
   snippet: string
   description: string
-  url?: string
   savedAt: number
 }
 
@@ -79,8 +78,6 @@ export default function ResumeTailor({ apiKey, onBack, onApiKeyChange }: ResumeT
   const resumeFileInputRef = useRef<HTMLInputElement>(null)
   const [jobDragActive, setJobDragActive] = useState(false)
   const [resumeDragActive, setResumeDragActive] = useState(false)
-  const [jobUrl, setJobUrl] = useState('')
-  const [scraping, setScraping] = useState(false)
   const [recentJobs, setRecentJobs] = useState<JobHistoryEntry[]>([])
   const [presets, setPresets] = useState<ProfilePreset[]>([])
   const [presetName, setPresetName] = useState('')
@@ -224,36 +221,6 @@ export default function ResumeTailor({ apiKey, onBack, onApiKeyChange }: ResumeT
     event.target.value = ''
   }
 
-  const handleScrapeJob = async () => {
-    if (!jobUrl.trim()) {
-      toast.error('Paste a job post URL to scrape')
-      return
-    }
-
-    setScraping(true)
-    try {
-      const response = await fetch('/api/scrape', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: jobUrl }),
-      })
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data?.error || 'Unable to fetch job posting')
-      }
-
-      setJobDescription(data.description)
-      saveJobToHistory(data.description, jobUrl)
-      toast.success('Job post imported')
-    } catch (error: any) {
-      console.error('Scrape error:', error)
-      toast.error(error?.message || 'Failed to scrape job post')
-    } finally {
-      setScraping(false)
-    }
-  }
-
   const persistRecentJobs = (entries: JobHistoryEntry[]) => {
     setRecentJobs(entries)
     if (typeof window !== 'undefined') {
@@ -268,14 +235,13 @@ export default function ResumeTailor({ apiKey, onBack, onApiKeyChange }: ResumeT
     }
   }
 
-  const saveJobToHistory = (description: string, url?: string) => {
+  const saveJobToHistory = (description: string) => {
     if (!description.trim()) return
     const snippet = description.replace(/\s+/g, ' ').slice(0, 160)
     const entry: JobHistoryEntry = {
       id: createId(),
       snippet,
       description,
-      url,
       savedAt: Date.now(),
     }
 
@@ -288,7 +254,6 @@ export default function ResumeTailor({ apiKey, onBack, onApiKeyChange }: ResumeT
     const found = recentJobs.find((job) => job.id === id)
     if (!found) return
     setJobDescription(found.description)
-    setJobUrl(found.url || '')
     toast.success('Loaded saved job description')
   }
 
@@ -371,7 +336,7 @@ export default function ResumeTailor({ apiKey, onBack, onApiKeyChange }: ResumeT
         content: resume,
       },
     ])
-    saveJobToHistory(jobDescription, jobUrl || undefined)
+    saveJobToHistory(jobDescription)
 
     setStep('processing')
     setIsProcessing(true)
@@ -798,28 +763,9 @@ Return the final cover letter text ready to copy-paste.`
                     <Target className="w-5 h-5 text-accent" />
                     <h2 className="font-semibold text-white">Job Description</h2>
                   </div>
-                  <div className="mb-4">
-                    <label className="text-xs text-white/60">Job post URL</label>
-                    <div className="flex flex-col sm:flex-row gap-2 mt-2">
-                      <input
-                        value={jobUrl}
-                        onChange={(e) => setJobUrl(e.target.value)}
-                        placeholder="https://jobs.lever.co/company/role"
-                        className="input-field w-full"
-                      />
-                      <button
-                        onClick={handleScrapeJob}
-                        disabled={scraping}
-                        className="btn-secondary text-xs px-3 py-2 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {scraping ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
-                        {scraping ? 'Scraping...' : 'Scrape URL'}
-                      </button>
-                    </div>
-                    <p className="text-xs text-white/40 mt-1">
-                      Pull the job description directly from the posting and clean the formatting.
-                    </p>
-                  </div>
+                  <p className="text-xs text-white/50 mb-4">
+                    Paste the full job description or import it from a file. We'll keep it locally so you can reuse it.
+                  </p>
                   <div className="flex flex-wrap gap-2 mb-3">
                     <button
                       onClick={() => jobFileInputRef.current?.click()}
@@ -828,7 +774,7 @@ Return the final cover letter text ready to copy-paste.`
                       Upload PDF/DOCX/TXT
                     </button>
                     <button
-                      onClick={() => saveJobToHistory(jobDescription, jobUrl || undefined)}
+                      onClick={() => saveJobToHistory(jobDescription)}
                       className="btn-secondary text-xs px-3 py-2"
                     >
                       <Save className="w-4 h-4" />
@@ -874,12 +820,6 @@ Include the full job posting with:
                             className="px-3 py-2 rounded-lg border border-white/10 bg-slate/60 text-left text-xs text-white/70 hover:border-accent/40 hover:text-white transition-colors"
                           >
                             <span className="block">{job.snippet}</span>
-                            {job.url && (
-                              <span className="flex items-center gap-1 text-[10px] text-white/40 mt-1">
-                                <Link2 className="w-3 h-3" />
-                                From URL
-                              </span>
-                            )}
                           </button>
                         ))}
                       </div>
